@@ -33,7 +33,7 @@ export function useScreenHistory<T>(key: string, snapshot: T, restore: (value: T
     const onPop = (event: PopStateEvent) => {
       const id = event.state?.ssinggeutScreen;
       const entry = entries.current.get(id);
-      if (!entry) return;
+      if (!entry) {entries.current.clear();current.current='';restoring.current=false;callbacks.current.home();return;}
       current.current = id;
       restoring.current = true;
       callbacks.current.restore(entry.value);
@@ -43,8 +43,12 @@ export function useScreenHistory<T>(key: string, snapshot: T, restore: (value: T
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  return () => {
+  const goBack = () => {
     if ((entries.current.get(current.current)?.depth ?? 0) > 0) window.history.back();
     else callbacks.current.home();
   };
+  // A successful membership change becomes a new navigation baseline.
+  // Old join/leave dialogs must not be resurrected by browser history.
+  const checkpoint = () => {entries.current.clear();current.current='';restoring.current=false;};
+  return {goBack,checkpoint};
 }
