@@ -3,7 +3,7 @@ export const topicCatalog = [{
  id: 'joseon-princes',
  title: '이방원의 왕자의 난은 정당화될 수 있을까?',
  videoTitle: '조선의 시작, 그리고 왕자의 난',
- video: '/assets/history.mp4', poster:'/assets/history.png', cover:'/assets/history.png', category:'역사', guide:'우리역사넷과 태조실록에서 사건의 과정과 기록의 관점을 비교해 보자.',
+ video: '/assets/history.mp4', poster:'/assets/history.png', cover:'/assets/joseon-princes-cover.svg', category:'역사', guide:'우리역사넷과 태조실록에서 사건의 과정과 기록의 관점을 비교해 보자.',
  context: '제공된 역사 영상을 보고 이방원의 선택과 그 결과를 살펴봅니다. 각자 궁금한 점을 만들고 자료에서 근거를 확인한 뒤 자신의 입장을 정리합니다. 찬성이나 반대를 미리 정하지 않아도 됩니다. 참고 자료: 우리역사넷 「왕자의 난」, 태조실록 1398년 8월 26일 기사.',
 },
 {"id": "school-phone", "title": "학교는 쉬는 시간에도 휴대전화 사용을 제한해야 할까?", "videoTitle": "같은 쉬는 시간", "video": "/assets/school-phone.mp4", "poster": "/assets/school-phone.png", "cover": "/assets/school-phone-cover.svg", "category": "학교생활", "guide": "우리 학교 생활규정의 휴대전화 조항을 읽고, 실제 사용 목적과 불편을 조사해 보자.", "context": "토론을 위한 가상의 상황이다. 실제 사건이나 통계가 아니다. 영상 내용: 쉬는 시간에 한 학생은 휴대전화로 그림을 그리고, 다른 학생은 게임을 하고, 또 다른 학생은 가족에게 연락한다. 종이 울리고 학생들이 휴대전화를 가방에 넣는다. 영상에 없는 동기나 결과를 사실로 단정하지 않는다. 학생이 스스로 질문과 판단 근거를 찾도록 돕는다."},
