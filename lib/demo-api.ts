@@ -2,19 +2,24 @@ import {topicCatalog} from './topic-catalog';
 const DATA='ssinggeut-demo-v1', ACCOUNT='ssinggeut-demo-account';
 export const demoAccounts=[{id:'선생님',nickname:'체험 선생님',role:'teacher'},...Array.from({length:6},(_,i)=>({id:`학생0${i+1}`,nickname:`학생 ${i+1}`,role:'student'}))];
 export function demoAccount(){return typeof window==='undefined'?null:sessionStorage.getItem(ACCOUNT)}
-export function loginDemo(id:string){if(!demoAccounts.some(a=>a.id===id.trim()))throw new Error('선생님 또는 학생01~학생06을 입력해 주세요.');sessionStorage.setItem(ACCOUNT,id.trim());window.location.reload()}
+type DemoUser={id:string;loginId?:string;nickname:string;role:string};
+const normalized=(value:string)=>value.trim().normalize('NFC');
+const loginKey=(value:string)=>normalized(value).toLowerCase();
+export function getDemoAccounts():DemoUser[]{if(typeof window==='undefined')return demoAccounts;return [...demoAccounts,...(load().accounts||[])]}
+export function loginDemo(value:string){const user=getDemoAccounts().find(a=>loginKey(a.loginId||a.id)===loginKey(value));if(!user)throw new Error('아직 없는 아이디예요. 새 체험 계정 만들기에서 가입해 주세요.');sessionStorage.setItem(ACCOUNT,user.id);window.location.reload()}
+export function registerDemo(value:string,nickname:string){const loginId=normalized(value),name=normalized(nickname);if(!/^[\p{L}\p{N}_.-]{1,30}$/u.test(loginId))throw new Error('아이디는 1~30자의 한글·영문·숫자·밑줄·점·하이픈으로 입력해 주세요.');if(!name||name.length>20)throw new Error('닉네임은 1~20자로 입력해 주세요.');if(getDemoAccounts().some(a=>loginKey(a.loginId||a.id)===loginKey(loginId)))throw new Error('이미 사용 중인 아이디예요. 로그인하거나 다른 아이디를 정해 주세요.');const d=load(),user={id:crypto.randomUUID(),loginId,nickname:name,role:'student'};d.accounts=[...(d.accounts||[]),user];persist(d);sessionStorage.setItem(ACCOUNT,user.id);window.location.reload()}
 export function exitDemo(){sessionStorage.removeItem(ACCOUNT);window.location.reload()}
 const stamp=()=>new Date().toISOString();
 function load(){const saved=localStorage.getItem(DATA);if(saved){const d=JSON.parse(saved);if(!d.membershipVersion){d.members=d.members.filter((m:any)=>m.group_id!=='demo-group'||m.user_id==='선생님');d.membershipVersion=2;persist(d)}return d;}const c=topicCatalog[0];return {membershipVersion:2,groups:[{id:'demo-group',owner:'선생님',name:'체험 토론반',code:'DEMO0001',created:stamp()}],topics:[{id:'demo-topic',group_id:'demo-group',title:c.title,context:c.context,due:new Date(Date.now()+7*86400000).toISOString(),created:stamp()}],members:[{group_id:'demo-group',user_id:'선생님'}],sessions:[],messages:[],allocations:[],attendance:[]}}
 function persist(d:any){try{localStorage.setItem(DATA,JSON.stringify(d))}catch{throw new Error('브라우저 저장 공간이 부족해 체험 기록을 저장하지 못했어요.')}}
 async function bridge(body:any){const r=await fetch('/api/app',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d:any=await r.json();if(!r.ok)throw new Error(d.error||'씽씽에 연결하지 못했어요.');return d}
 export async function demoRequest(query='',body?:any){
- const uid=demoAccount(),user=demoAccounts.find(a=>a.id===uid);if(!user)throw new Error('체험 계정을 선택해 주세요.');
+ const accounts=getDemoAccounts(),uid=demoAccount(),user=accounts.find(a=>a.id===uid);if(!user)throw new Error('체험 계정을 선택해 주세요.');
  const d=load(),p=new URLSearchParams(query),action=body?.action||p.get('action');
  const owner=(gid:string)=>{const g=d.groups.find((g:any)=>g.id===gid&&g.owner===uid);if(!g)throw new Error('그룹 선생님만 할 수 있어요.');return g};
  const member=(gid:string)=>{if(!d.members.some((m:any)=>m.group_id===gid&&m.user_id===uid))throw new Error('이 그룹에 참여해 주세요.')};
  const session=(id:string)=>{const s=d.sessions.find((s:any)=>s.id===id&&s.owner===uid);if(!s)throw new Error('내 기록만 열 수 있어요.');return s};
- const roster=(gid:string)=>demoAccounts.filter(a=>a.role==='student'&&d.members.some((m:any)=>m.group_id===gid&&m.user_id===a.id));
+ const roster=(gid:string)=>accounts.filter(a=>a.role==='student'&&d.members.some((m:any)=>m.group_id===gid&&m.user_id===a.id));
  const latest=(tid:string,id:string)=>d.sessions.filter((s:any)=>s.topic_id===tid&&s.owner===id).sort((a:any,b:any)=>b.updated.localeCompare(a.updated))[0];
  const allocation=(gid:string,tid?:string)=>{const a=d.allocations.filter((a:any)=>a.group_id===gid&&(!tid||a.topic_id===tid)).at(-1);return a&&a.assignments.length===roster(gid).length&&a.assignments.every((x:any)=>roster(gid).some(r=>r.id===x.id))?a:null};
  const lesson=(g:any,t:any)=>{const students=roster(g.id).map(r=>{const s=latest(t.id,r.id);return {id:r.id,nickname:r.nickname,active:!!s&&(!!(s.question||s.opinion||s.evidence)||d.messages.some((m:any)=>m.session_id===s.id)),complete:!!s?.complete,stance:s?.stance||'undecided',updated:s?.updated||null}});return {...t,students,active:students.filter(s=>s.active).length,complete:students.filter(s=>s.complete).length,pro:students.filter(s=>s.complete&&s.stance==='pro').length,con:students.filter(s=>s.complete&&s.stance==='con').length,allocation:allocation(g.id,t.id)}};
