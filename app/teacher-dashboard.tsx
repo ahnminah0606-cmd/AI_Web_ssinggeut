@@ -2,9 +2,10 @@
 import {useEffect,useState} from 'react';
 import {Users,Check,CalendarDays,ArrowRight,Play,Plus,RefreshCw} from 'lucide-react';
 import {Progress} from '@/components/ui/progress';
+import {demoAccount,demoRequest} from '@/lib/demo-api';
 import {topicCatalog} from '@/lib/topic-catalog';
 
-async function request(data?:unknown){const r=await fetch('/api/app'+(data?'':'?action=teacher-summary'),data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:undefined);const d:any=await r.json();if(!r.ok)throw new Error(d.error||'불러오지 못했어요.');return d}
+async function request(data?:unknown){if(demoAccount())return demoRequest('action=teacher-summary',data);const r=await fetch('/api/app'+(data?'':'?action=teacher-summary'),data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:undefined);const d:any=await r.json();if(!r.ok)throw new Error(d.error||'불러오지 못했어요.');return d}
 export default function TeacherDashboard({groupId,catalogOnly=false,onGroup,onChoose,onCreate,onVideo}:{groupId?:string;catalogOnly?:boolean;onGroup:(id:string)=>void;onChoose:(id:string,catalogId:string)=>void;onCreate:()=>void;onVideo:()=>void}){
  const [groups,setGroups]=useState<any[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[pending,setPending]=useState(''),[selected,setSelected]=useState<Record<string,string>>({}),[target,setTarget]=useState('');
  async function refresh(){const d=await request();setGroups(d.groups);setTarget(v=>v||d.groups[0]?.id||'')}
