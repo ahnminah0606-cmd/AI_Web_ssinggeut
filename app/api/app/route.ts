@@ -5,6 +5,8 @@ export const dynamic='force-dynamic';
 const json=(d:any,status=200)=>Response.json(d,{status,headers:{'Cache-Control':'no-store'}});
 const fail=(e:unknown)=>{if(e instanceof Problem)return json({error:e.message},e.status);console.error('app failure',e instanceof Error?e.message:'unknown');return json({error:'연결에 문제가 생겼어. 입력한 내용을 지우지 말고 다시 시도해 줘.'},503)};
 const validRoster=(assignments:any[],roster:any[])=>assignments.length===roster.length&&assignments.every(a=>roster.some(r=>r.id===a.id));
+const demoHits=new Map<string,{day:string,count:number}>();
+function publicDemoUser(req:Request){const key=(req.headers.get('x-forwarded-for')||req.headers.get('x-real-ip')||'local').split(',')[0].trim().slice(0,80),today=day(),hit=demoHits.get(key);if(hit?.day===today&&hit.count>=60)throw new Problem(429,'오늘의 시연 대화 횟수를 모두 사용했어요. 내일 다시 이용해 주세요.');demoHits.set(key,{day:today,count:hit?.day===today?hit.count+1:1});return {userId:'public-demo-'+key,email:'demo@ssinggeut.local',displayName:'시연 사용자',fullName:null,admin:false,demo:true}}
 export async function GET(req:Request){try{
  if(!await getChatGPTUser())return json({signedIn:false});const u=await auth();const url=new URL(req.url);const action=url.searchParams.get('action');
  if(action==='teacher-summary'){
@@ -34,11 +36,11 @@ export async function GET(req:Request){try{
  }catch(e){return fail(e)}}
 export async function POST(req:Request){try{
  const origin=req.headers.get('origin');if(origin&&origin!==new URL(req.url).origin)throw new Problem(403,'페이지를 새로 열고 다시 시도해 줘.');if(!req.headers.get('content-type')?.includes('application/json'))throw new Problem(415,'올바른 요청이 아니야.');
- const u=await auth();const raw=await req.text();if(raw.length>22000)throw new Problem(413,'내용을 조금 나누어 보내 줘.');let b:any;try{b=JSON.parse(raw)}catch{throw new Problem(400,'입력을 확인해 줘.')}const action=b.action;
+ const raw=await req.text();if(raw.length>22000)throw new Problem(413,'내용을 조금 나누어 보내 줘.');let b:any;try{b=JSON.parse(raw)}catch{throw new Problem(400,'입력을 확인해 줘.')}const action=b.action,demoAction=action==='demo-chat'||action==='demo-allocate';const signedUser=await getChatGPTUser();const u:any=signedUser?await auth():demoAction?publicDemoUser(req):await auth();
  if(action==='signup'){const nickname=str(b.nickname,20,1);await write('INSERT INTO profiles(id,nickname,role,created) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET nickname=excluded.nickname',u.userId,nickname,'student',now());return json({ok:true})}
  if(action==='demo-chat'||action==='demo-allocate'){
  const selected=topicCatalog.find(t=>t.id===b.catalogId);if(!selected)throw new Problem(400,'주제를 다시 선택해 주세요.');
- if(!u.admin)throw new Problem(403,'실제 계정으로 로그인한 사이트 소유자만 체험 AI를 사용할 수 있어요.');
+ if(!u.admin&&!u.demo)throw new Problem(403,'시연 AI를 사용할 수 없는 계정이에요.');
  if(action==='demo-chat'){
  const message=str(b.message,2500,1);const history=Array.isArray(b.history)?b.history.slice(-12).map((m:any)=>({role:m.role==='assistant'?'assistant':'user',content:str(m.content,2500)})):[];
  const previous:any={};for(const k of ['question','opinion','evidence','next_question'])previous[k]=str(b.notes?.[k]||'',1500);
