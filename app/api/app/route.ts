@@ -48,7 +48,7 @@ export async function POST(req:Request){try{
  const candidates=b.candidates.map((c:any)=>({id:str(c.id,100,1),question:str(c.question,1500),opinion:str(c.opinion,1500),evidence:str(c.evidence,1500)}));
  if(new Set(candidates.map((c:any)=>c.id)).size!==candidates.length)throw new Problem(400,'학생이 중복되었어요.');
  const counts:Record<string,number>={};for(const c of candidates)counts[c.id]=Math.max(0,Math.min(10000,Number(b.counts?.[c.id])||0));
- return json({assignments:await assignDebate(u,selected.title,candidates,counts)});
+ return json({assignments:await assignDebate(u,selected.title,candidates,counts,b.requiredId?str(b.requiredId,100,1):undefined)});
  }
  const p=await profile(u);
  if(action==='teacher-request'){await write("INSERT INTO teacher_requests(user_id,name,institution,evidence,status,created) VALUES(?,?,?,?,'pending',?) ON CONFLICT(user_id) DO UPDATE SET name=excluded.name,institution=excluded.institution,evidence=excluded.evidence,status='pending',created=excluded.created",u.userId,str(b.name,80,1),str(b.institution,160,1),str(b.evidence,1500,10),now());return json({ok:true})}
